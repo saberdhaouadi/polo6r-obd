@@ -5,6 +5,7 @@ import android.app.Application
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.content.Context
+import android.os.SystemClock
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.polo6r.obdscanner.obd.BluetoothObdManager
@@ -49,7 +50,10 @@ data class LiveData(
     val voltage: Float? = null,
     val stft: Float? = null,
     val ltft: Float? = null,
-    val fuelStatus: String? = null
+    val fuelStatus: String? = null,
+    val tripKm: Float = 0f,
+    val sinceClearKm: Int? = null,
+    val milKm: Int? = null
 )
 
 data class DtcState(
@@ -101,9 +105,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     @Volatile private var liveActive = false
     @Volatile private var opBusy = false
     @Volatile private var isCan = true
+    @Volatile private var lastSpeedAt = 0L
 
     private val fastPids = listOf("010C", "010D", "0104", "0111")
-    private val slowPids = listOf("0105", "010F", "0106", "0107", "0103", "ATRV")
+    private val slowPids = listOf("0105", "010F", "0106", "0107", "0103", "0131", "0121", "ATRV")
 
     init {
         obd.onTraffic = { tx, rx ->
@@ -238,7 +243,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     // ----------------------------------------------------------------------- live data
 
-    fun setLiveActive(active: Boolean) { liveActive = active }
+    fun setLiveActive(active: Boolean) {
+        liveActive = active
+        if (!active) lastSpeedAt = 0L
+    }
+
+    fun resetTrip() { _live.update { it.copy(tripKm = 0f) } }
 
     private fun startPolling() {
         liveJob?.cancel()
@@ -286,16 +296,29 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
         val v = ObdParser.decodePid(pid, raw)
+        var tripAdd = 0f
+        if (pid == "0D") {
+            val now = SystemClock.elapsedRealtime()
+            if (v != null) {
+                if (lastSpeedAt != 0L) {
+                    val dtMs = (now - lastSpeedAt).coerceIn(0L, 5000L)
+                    tripAdd = v.toFloat() * dtMs / 3_600_000f
+                }
+                lastSpeedAt = now
+            } else lastSpeedAt = 0L
+        }
         _live.update {
             when (pid) {
                 "0C" -> it.copy(rpm = v?.toInt())
-                "0D" -> it.copy(speed = v?.toInt())
+                "0D" -> it.copy(speed = v?.toInt(), tripKm = it.tripKm + tripAdd)
                 "05" -> it.copy(coolant = v?.toInt())
                 "0F" -> it.copy(iat = v?.toInt())
                 "04" -> it.copy(load = v?.toFloat())
                 "11" -> it.copy(throttle = v?.toFloat())
                 "06" -> it.copy(stft = v?.toFloat())
                 "07" -> it.copy(ltft = v?.toFloat())
+                "31" -> it.copy(sinceClearKm = v?.toInt())
+                "21" -> it.copy(milKm = v?.toInt())
                 else -> it
             }
         }

@@ -93,6 +93,7 @@ object ObdParser {
         "05", "0F" -> pidData(raw, pid, 1)?.let { it[0] - 40.0 }
         "04", "11" -> pidData(raw, pid, 1)?.let { it[0] * 100.0 / 255.0 }
         "06", "07" -> pidData(raw, pid, 1)?.let { (it[0] - 128) * 100.0 / 128.0 }
+        "31", "21" -> pidData(raw, pid, 2)?.let { (it[0] * 256 + it[1]).toDouble() }
         else -> null
     }
 

@@ -1,5 +1,6 @@
 package com.polo6r.obdscanner.ui
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -35,6 +36,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -46,6 +48,7 @@ import com.polo6r.obdscanner.ConnState
 import com.polo6r.obdscanner.ConnectionUi
 import com.polo6r.obdscanner.MainViewModel
 import com.polo6r.obdscanner.PairedDevice
+import com.polo6r.obdscanner.R
 
 @Composable
 fun ConnectionScreen(vm: MainViewModel, onRequestPermissions: () -> Unit, modifier: Modifier = Modifier) {
@@ -65,6 +68,17 @@ fun ConnectionScreen(vm: MainViewModel, onRequestPermissions: () -> Unit, modifi
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = "Polo",
+                modifier = Modifier.size(84.dp).clip(MaterialTheme.shapes.medium).background(Color(0xFF0B0F14))
+            )
+            Column {
+                Text("Polo 6R Scanner", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                Text("VW Polo 6R · ELM327 Bluetooth", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+            }
+        }
         StatusCard(conn, onDisconnect = { vm.disconnect() })
 
         if (!hasPerm) {
